@@ -1,9 +1,11 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from openai import OpenAI
 import os
+import json
 from dotenv import load_dotenv
 import tools
 from database import get_db, init_db
@@ -132,43 +134,76 @@ async def chat_endpoint(request: ChatRequest, db: Session = Depends(get_db)):
   }
 
   messages = [system_message] + request.history + [{"role" : "user", "content": request.message}]
-  
-  # Use a loop to allow the AI to make multiple sequential tool calls (Reasoning Loop)
-  while True:
-    response = client.chat.completions.create(
-      model="gemma4:31b-cloud",
-      messages=messages,
-      tools=tool_definitions,
-      tool_choice="auto"
-    )
 
-    response_message = response.choices[0].message
-    # print(f"AI Decision: {response_message}")
+  def stream_reply():
+    # Use a loop to allow the AI to make multiple sequential tool calls (Reasoning Loop)
+    while True:
+      stream = client.chat.completions.create(
+        model="gemma4:31b-cloud",
+        messages=messages,
+        tools=tool_definitions,
+        tool_choice="auto",
+        stream=True
+      )
 
-    if not response_message.tool_calls:
-      # AI has finished reasoning and is providing a final answer
-      break
+      content_acc = ""
+      tool_calls_acc = {}
 
-    # AI wants to call tools, so we record the request and execute them
-    messages.append(response_message)
+      for chunk in stream:
+        delta = chunk.choices[0].delta
 
-    for tool_call in response_message.tool_calls:
-      # print(f"Calling Tool: {tool_call.function.name} with args: {tool_call.function.arguments}")
-      function_name = tool_call.function.name
-      import json
-      args = json.loads(tool_call.function.arguments)
+        if delta.content:
+          content_acc += delta.content
+          yield delta.content
 
-      if function_name in tools.AVAILABLE_TOOLS:
-        tool_func = tools.AVAILABLE_TOOLS[function_name]
-        result = tool_func(db=db, **args)
-        # print(f"DB Result for {tool_call.function.name}: {result}")
-        
+        if delta.tool_calls:
+          for tc in delta.tool_calls:
+            entry = tool_calls_acc.setdefault(tc.index, {"id": None, "name": "", "arguments": ""})
+            if tc.id:
+              entry["id"] = tc.id
+            if tc.function and tc.function.name:
+              entry["name"] += tc.function.name
+            if tc.function and tc.function.arguments:
+              entry["arguments"] += tc.function.arguments
+
+      if not tool_calls_acc:
+        # AI has finished reasoning and streamed its final answer
+        break
+
+      # AI wants to call tools, so we record the request and execute them
+      messages.append({
+        "role": "assistant",
+        "content": content_acc or None,
+        "tool_calls": [
+          {
+            "id": tc["id"],
+            "type": "function",
+            "function": {"name": tc["name"], "arguments": tc["arguments"]}
+          } for tc in tool_calls_acc.values()
+        ]
+      })
+
+      for tc in tool_calls_acc.values():
+        function_name = tc["name"]
+        try:
+          args = json.loads(tc["arguments"]) if tc["arguments"] else {}
+        except json.JSONDecodeError:
+          args = {}
+
+        if function_name in tools.AVAILABLE_TOOLS:
+          tool_func = tools.AVAILABLE_TOOLS[function_name]
+          try:
+            result = tool_func(db=db, **args)
+          except Exception as e:
+            result = {"error": f"Tool '{function_name}' failed: {e}"}
+        else:
+          result = {"error": f"Unknown tool '{function_name}'"}
+
         messages.append({
           "role": "tool",
-          "tool_call_id": tool_call.id,
+          "tool_call_id": tc["id"],
           "name": function_name,
           "content": str(result)
         })
 
-  # Final result is the content of the last message after the loop breaks
-  return {"response" : response_message.content}
+  return StreamingResponse(stream_reply(), media_type="text/plain")

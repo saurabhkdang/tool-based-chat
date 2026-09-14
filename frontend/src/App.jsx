@@ -1,7 +1,13 @@
 import React, {useState, useEffect, useRef} from "react";
-import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import './App.css';
+
+const markdownComponents = {
+  table: ({ node, ...props }) => (
+    <div className="table-wrapper"><table {...props} /></div>
+  )
+};
 
 function App(){
   const [messages, setMessages] = useState([]);
@@ -17,31 +23,64 @@ function App(){
     scrollToBottom();
   }, [messages]);
 
+  const appendToLastMessage = (chunk) => {
+    setMessages((prev) => {
+      const updated = [...prev];
+      const lastIndex = updated.length - 1;
+      updated[lastIndex] = {
+        ...updated[lastIndex],
+        content: updated[lastIndex].content + chunk
+      };
+      return updated;
+    });
+  };
+
   const sendMessage = async(e) => {
     e.preventDefault();
     if(!input.trim()) return;
 
     const userMessage = {role: 'user', content: input};
-    setMessages((prev) => [...prev, userMessage]);
+    const history = messages.map(msg => ({
+      role: msg.role,
+      content: msg.content
+    }));
+
+    setMessages((prev) => [...prev, userMessage, {role: 'assistant', content: ''}]);
     setInput('');
     setIsLoading(true);
 
     try {
-      const history = messages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
-
-      const response = await axios.post('http://127.0.0.1:8000/chat', {
-        message: input,
-        history: history
+      const response = await fetch('http://127.0.0.1:8000/chat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({message: userMessage.content, history})
       });
 
-      const aiMessage = {role: 'assistant', content: response.data.response};
-      setMessages((prev) => [...prev, aiMessage]);
+      if (!response.ok || !response.body) {
+        throw new Error('Request failed');
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+
+      while (!done) {
+        const {value, done: readerDone} = await reader.read();
+        done = readerDone;
+        if (value) {
+          appendToLastMessage(decoder.decode(value, {stream: true}));
+        }
+      }
     } catch (error) {
       console.error("Error calling AI Agent: ",error);
-      setMessages((prev) => [...prev, { role: 'assistant', content: "Sorry, I'm having trouble connecting to my brain. Please check if the backend is running." }]);
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          role: 'assistant',
+          content: "Sorry, I'm having trouble connecting to my brain. Please check if the backend is running."
+        };
+        return updated;
+      });
     } finally {
       setIsLoading(false);
     }
@@ -69,7 +108,15 @@ function App(){
             {msg.role === 'assistant' && <div className="avatar bot-avatar">🤖</div>}
             <div className="message-bubble">
               {msg.role === 'assistant' ? (
-                <ReactMarkdown>{msg.content}</ReactMarkdown>
+                msg.content ? (
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{msg.content}</ReactMarkdown>
+                ) : (
+                  <span className="loading">
+                    <span className="dot"></span>
+                    <span className="dot"></span>
+                    <span className="dot"></span>
+                  </span>
+                )
               ) : (
                 msg.content
               )}
@@ -77,16 +124,6 @@ function App(){
             {msg.role === 'user' && <div className="avatar user-avatar">🙂</div>}
           </div>
         ))}
-        {isLoading && (
-          <div className="message-wrapper assistant">
-            <div className="avatar bot-avatar">🤖</div>
-            <div className="message-bubble loading">
-              <span className="dot"></span>
-              <span className="dot"></span>
-              <span className="dot"></span>
-            </div>
-          </div>
-        )}
         <div ref={messagesEndRef} />
       </div>
 
