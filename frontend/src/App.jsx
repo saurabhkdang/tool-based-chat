@@ -1,5 +1,6 @@
 import React, {useState, useEffect, useRef} from "react";
 import axios from 'axios';
+import ReactMarkdown from 'react-markdown';
 import './App.css';
 
 function App(){
@@ -49,26 +50,36 @@ function App(){
   return (
     <div className="chat-container">
       <header className="chat-header">
-        <h1>AI Employee Agent</h1>
-        <p>Ask me about your employees</p>
+        <div className="header-avatar">🤖</div>
+        <div>
+          <h1>AI Business Assistant</h1>
+          <p>Ask about employees, customers, orders &amp; products</p>
+        </div>
       </header>
 
       <div className="messages-list">
         {messages.length === 0 && (
           <div className="welcome-screen">
             <div className="bot-icon">🤖</div>
-            <p>Hello! I can help you manage employee data. Try asking "Who are the employees?" or "Tell me about employee 1".</p>
+            <p>Hello! I can help you look up employees, customers, orders and products. Try asking "Who are the employees in Sales?" or "Show me pending orders".</p>
           </div>
         )}
         {messages.map((msg, index) => (
           <div key={index} className={`message-wrapper ${msg.role}`}>
+            {msg.role === 'assistant' && <div className="avatar bot-avatar">🤖</div>}
             <div className="message-bubble">
-              {msg.content}
+              {msg.role === 'assistant' ? (
+                <ReactMarkdown>{msg.content}</ReactMarkdown>
+              ) : (
+                msg.content
+              )}
             </div>
+            {msg.role === 'user' && <div className="avatar user-avatar">🙂</div>}
           </div>
         ))}
         {isLoading && (
           <div className="message-wrapper assistant">
+            <div className="avatar bot-avatar">🤖</div>
             <div className="message-bubble loading">
               <span className="dot"></span>
               <span className="dot"></span>
@@ -87,8 +98,10 @@ function App(){
           placeholder="Type your message here..."
           disabled={isLoading}
         />
-        <button type="submit" disabled={isLoading || !input.trim()}>
-          Send
+        <button type="submit" className="send-button" disabled={isLoading || !input.trim()} aria-label="Send message">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 12L20 4L13 20L11 13L4 12Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round"/>
+          </svg>
         </button>
       </form>
     </div>

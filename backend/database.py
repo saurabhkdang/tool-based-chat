@@ -24,6 +24,7 @@ class Category(Base):
   __tablename__ = "categories"
   category_id = Column(Integer, primary_key=True, index=True)
   category_name = Column(String(50), unique=True)
+  products = relationship("Product", back_populates="category")
 
 class Product(Base):
   __tablename__ = "products"
@@ -32,6 +33,7 @@ class Product(Base):
   category_id = Column(Integer, ForeignKey("categories.category_id"))
   price = Column(Float)
   stock_quantity = Column(Integer)
+  category = relationship("Category", back_populates="products")
   order_items = relationship("OrderItem", back_populates="product")
 
 class Customer(Base):
