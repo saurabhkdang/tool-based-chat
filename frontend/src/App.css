@@ -36,6 +36,15 @@ body {
   box-shadow: 0 20px 60px rgba(30, 41, 59, 0.12);
 }
 
+@media (min-width: 640px) {
+  .chat-container {
+    height: calc(100vh - 48px);
+    margin: 24px auto;
+    border-radius: 20px;
+    overflow: hidden;
+  }
+}
+
 .chat-header {
   display: flex;
   align-items: center;
@@ -88,7 +97,7 @@ body {
 
 .message-wrapper {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 8px;
   width: 100%;
 }
@@ -100,6 +109,7 @@ body {
   width: 30px;
   height: 30px;
   min-width: 30px;
+  margin-top: 2px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -116,11 +126,16 @@ body {
 }
 
 .message-bubble {
-  max-width: 72%;
+  max-width: 78%;
   padding: 12px 16px;
   border-radius: 18px;
   font-size: 0.95rem;
   line-height: 1.5;
+  text-align: left;
+}
+
+.assistant .message-bubble {
+  max-width: 88%;
 }
 
 .user .message-bubble {
