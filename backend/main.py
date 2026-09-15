@@ -41,6 +41,14 @@ class ChatRequest(BaseModel):
   message: str
   history: list = []
 
+@app.get("/module-info")
+def module_info():
+  return {
+    "name": getattr(tools, "DISPLAY_NAME", "AI Assistant"),
+    "subtitle": getattr(tools, "DISPLAY_SUBTITLE", ""),
+    "welcome_message": getattr(tools, "WELCOME_MESSAGE", "Hello! How can I help you today?")
+  }
+
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest, db: Session = Depends(get_db)):
 

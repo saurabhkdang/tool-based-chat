@@ -101,6 +101,10 @@ def query_attendances(db: Session, emp_id: int = None, attendance_status: str = 
 
 SYSTEM_PROMPT = "You are a professional HR assistant. Help users look up employee records, reporting hierarchy, job descriptions, and related HR information. When you receive data from a tool, summarize it clearly and naturally. Never return an empty response if the tool returned data. When a tool result contains a numeric value, state that exact number in your response - never recalculate, round, or guess a number yourself."
 
+DISPLAY_NAME = "AI HR Assistant"
+DISPLAY_SUBTITLE = "Ask about employees, hierarchy, attendance & job descriptions"
+WELCOME_MESSAGE = 'Hello! I can help you look up employees, reporting hierarchy, attendance and job descriptions. Try asking "Who reports to Manoj?" or "Show me pending leave records".'
+
 AVAILABLE_TOOLS = {
   "query_employees" : query_employees,
   "query_job_description" : query_job_description,

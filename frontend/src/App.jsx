@@ -3,6 +3,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './App.css';
 
+const API_BASE = 'http://172.16.0.21:8000';
+
 const markdownComponents = {
   table: ({ node, ...props }) => (
     <div className="table-wrapper"><table {...props} /></div>
@@ -13,6 +15,11 @@ function App(){
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [moduleInfo, setModuleInfo] = useState({
+    name: 'AI Assistant',
+    subtitle: '',
+    welcome_message: 'Hello! How can I help you today?'
+  });
   const messagesEndRef = useRef(null);
 
   const scrollToBottom = () => {
@@ -22,6 +29,13 @@ function App(){
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/module-info`)
+      .then((res) => res.json())
+      .then((data) => setModuleInfo(data))
+      .catch((error) => console.error("Error fetching module info: ", error));
+  }, []);
 
   const appendToLastMessage = (chunk) => {
     setMessages((prev) => {
@@ -50,7 +64,7 @@ function App(){
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://172.16.0.21:8000/chat', {
+      const response = await fetch(`${API_BASE}/chat`, {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({message: userMessage.content, history})
@@ -91,8 +105,8 @@ function App(){
       <header className="chat-header">
         <div className="header-avatar">🤖</div>
         <div>
-          <h1>AI Business Assistant</h1>
-          <p>Ask about employees, customers, orders &amp; products</p>
+          <h1>{moduleInfo.name}</h1>
+          <p>{moduleInfo.subtitle}</p>
         </div>
       </header>
 
@@ -100,7 +114,7 @@ function App(){
         {messages.length === 0 && (
           <div className="welcome-screen">
             <div className="bot-icon">🤖</div>
-            <p>Hello! I can help you look up employees, customers, orders and products. Try asking "Who are the employees in Sales?" or "Show me pending orders".</p>
+            <p>{moduleInfo.welcome_message}</p>
           </div>
         )}
         {messages.map((msg, index) => (
