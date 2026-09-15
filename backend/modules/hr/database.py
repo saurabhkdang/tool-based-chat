@@ -31,6 +31,7 @@ class Employee(Base):
   jd_id = Column(Integer, ForeignKey("api_job_description.id"))
   jd = relationship("JobDescription", back_populates="employees")
   attendances = relationship("Attendance", back_populates="employees")
+  leaves = relationship("Leaves", back_populates="employees")
 
 class JobDescription(Base):
   __tablename__ = "api_job_description"
@@ -69,6 +70,21 @@ class Attendance(Base):
   status = Column(Enum(AttendanceStatus, name="attendance_status"))
   status_value = Column(Float)
   employees = relationship("Employee", back_populates="attendances")
+
+class Leaves(Base):
+  __tablename__ = "hrdb_users_leaves"
+  id = Column(Integer, primary_key=True, index=True)
+  user_id = Column(Integer, ForeignKey("api_users_hrdb.id"))
+  type_of_leave = Column(Enum(AttendanceStatus, name="attendance_status"))
+  start_date = Column(Date)
+  end_date = Column(Date)
+  total_days = Column(Float)
+  status = Column(Enum('approved','pending','rejected', name="leaves_status"))
+  working_on = Column(String(500))
+  reason = Column(String(500))
+  action_date = Column(Date)
+  action_comment = Column(String(500))
+  employees = relationship("Employee", back_populates="leaves")
 
 def init_db():
   Base.metadata.create_all(bind=engine)

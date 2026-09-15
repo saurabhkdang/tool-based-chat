@@ -1,4 +1,4 @@
-from modules.hr.functions import query_employees, query_job_description, query_attendances
+from modules.hr.functions import query_employees, query_job_description, query_attendances, query_leaves
 
 SYSTEM_PROMPT = "You are a professional HR assistant. Help users look up employee records, reporting hierarchy, job descriptions, and related HR information. When you receive data from a tool, summarize it clearly and naturally. Never return an empty response if the tool returned data. When a tool result contains a numeric value, state that exact number in your response - never recalculate, round, or guess a number yourself."
 
@@ -9,7 +9,8 @@ WELCOME_MESSAGE = 'Hello! I can help you look up employees, reporting hierarchy,
 AVAILABLE_TOOLS = {
   "query_employees" : query_employees,
   "query_job_description" : query_job_description,
-  "query_attendances" : query_attendances
+  "query_attendances" : query_attendances,
+  "query_leaves" : query_leaves
 }
 
 TOOL_DEFINITIONS = [
@@ -70,6 +71,22 @@ TOOL_DEFINITIONS = [
             "attendance_status": {"type": "string", "description": "Filter by attendance status, e.g. 'Present', 'Privilege Leave', 'Sick Leave'"},
             "date_from": {"type": "string", "description": "Only include attendance records on/after this date (YYYY-MM-DD)"},
             "date_to": {"type": "string", "description": "Only include attendance records on/before this date (YYYY-MM-DD)"}
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "query_leaves",
+        "description": "Search employee leave records, including type, status, dates, and approval details. Use this for questions about leave requests, leave balances, or approval status.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "emp_id": {"type": "integer", "description": "Employee id to search leave records for"},
+            "leave_status": {"type": "string", "description": "Filter by leave approval status: 'approved', 'pending', or 'rejected'"},
+            "leave_date_from": {"type": "string", "description": "Only include leaves starting on/after this date (YYYY-MM-DD)"},
+            "leave_end_to": {"type": "string", "description": "Only include leaves ending on/before this date (YYYY-MM-DD)"}
           }
         }
       }

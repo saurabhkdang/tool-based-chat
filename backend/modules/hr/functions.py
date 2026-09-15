@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy import func, or_, extract
-from modules.hr.database import Employee, JobDescription, Attendance, AttendanceStatus
+from modules.hr.database import Employee, JobDescription, Attendance, AttendanceStatus, Leaves
 
 def query_employees(db: Session, id: int = None, name: str = None, email: str = None, manager_name: str = None, status: bool = None, under_manager_id: int = None, born_after: str = None, born_before: str = None, birth_month: str = None, birth_day: str = None, joined_after: str = None, joined_before: str = None, joined_month: str = None, joined_day: str = None, city: str = None, state: str = None, department: str = None, buddy_name: str = None, having_jd_id: int = None):
   query = db.query(Employee)
@@ -98,3 +98,19 @@ def query_attendances(db: Session, emp_id: int = None, attendance_status: str = 
   attendances = query.all()
 
   return [{ "attendance_date" : a.attendance_date, "attendance_status" : a.status, "attendance_value" : a.status_value } for a in attendances]
+
+def query_leaves(db: Session, emp_id: int = None, leave_status: str = None, leave_date_from: str = None, leave_end_to: str = None):
+
+  query = db.query(Leaves)
+  if emp_id:
+    query = query.filter(Leaves.user_id == emp_id)
+  if leave_date_from:
+    query = query.filter(Leaves.start_date >= leave_date_from)
+  if leave_end_to:
+    query = query.filter(Leaves.end_date <= leave_end_to)
+  if leave_status:
+    query = query.filter(Leaves.status.ilike(leave_status))
+
+  leaves = query.all()
+
+  return  [{ "type_of_date" : l.type_of_leave, "start_date" : l.start_date, "end_date" : l.end_date, "total_days" : l.total_days, "status" : l.status, "working_on" : l.working_on, "leave_reason" : l.reason, "leave_action_date" : l.action_date, "leave_action_comment" : l.action_comment, "employee_name" : l.employees.name, "emp_id" : l.user_id } for l in leaves]
