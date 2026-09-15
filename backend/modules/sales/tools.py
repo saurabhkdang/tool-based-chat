@@ -137,7 +137,7 @@ def get_sales_summary(db: Session):
         "total_orders": total_orders
     }
 
-SYSTEM_PROMPT = {"role": "system", "content" : "You are a professional business assistant. When you receive data from a tool, summarize it clearly and naturally for the user. If you find multiple orders or items, list them clearly. Never return an empty response if the tool returned data. When a tool result contains a numeric value (counts, totals, prices, revenue), state that exact number in your response - never recalculate, round, or guess a number yourself."}
+SYSTEM_PROMPT = "You are a professional business assistant. When you receive data from a tool, summarize it clearly and naturally for the user. If you find multiple orders or items, list them clearly. Never return an empty response if the tool returned data. When a tool result contains a numeric value (counts, totals, prices, revenue), state that exact number in your response - never recalculate, round, or guess a number yourself."
 
 AVAILABLE_TOOLS = {
     "query_employees": query_employees,

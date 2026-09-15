@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session, aliased
 from sqlalchemy import func, or_, extract
 from modules.hr.database import Employee, JobDescription, Attendance, AttendanceStatus
 
-def query_employees(db: Session, id: int = None, name: str = None, email: str = None, manager_name: str = None, status: bool = None, under_manager_id: int = None, born_after: str = None, born_before: str = None, birth_month: str = None, birth_day: str = None, joined_after: str = None, joined_before: str = None, city: str = None, state: str = None, department: str = None, buddy_name: str = None, having_jd_id: int = None):
+def query_employees(db: Session, id: int = None, name: str = None, email: str = None, manager_name: str = None, status: bool = None, under_manager_id: int = None, born_after: str = None, born_before: str = None, birth_month: str = None, birth_day: str = None, joined_after: str = None, joined_before: str = None, joined_month: str = None, joined_day: str = None, city: str = None, state: str = None, department: str = None, buddy_name: str = None, having_jd_id: int = None):
   query = db.query(Employee)
 
   if under_manager_id:
@@ -34,6 +34,10 @@ def query_employees(db: Session, id: int = None, name: str = None, email: str = 
     query = query.filter(Employee.doj >= joined_after)
   if joined_before:
     query = query.filter(Employee.doj <= joined_before)
+  if joined_month:
+    query = query.filter(extract('month', Employee.doj) == joined_month)
+  if joined_day:
+    query = query.filter(extract('day', Employee.doj) == joined_day)
   if born_after:
     query = query.filter(Employee.dob >= born_after)
   if born_before:
@@ -50,7 +54,7 @@ def query_employees(db: Session, id: int = None, name: str = None, email: str = 
   if not employees:
     return {"error" : "No employees found matching the given criteria"}
   return [{
-    "id": e.id, "name" : e.name, "email": e.email, "manager": e.manager.name
+    "id": e.id, "name" : e.name, "email": e.email, "manager": e.manager.name, "doj": e.doj, "department": e.department, "city": e.city
   } for e in employees]
 
 def query_job_description(db: Session, job_title: str = None, include_employees: bool = False):
@@ -71,12 +75,16 @@ def query_job_description(db: Session, job_title: str = None, include_employees:
     results.append(entry)
   return results
 
-def query_attendances(db: Session, emp_id: int = None, attendance_status: str = None):
+def query_attendances(db: Session, emp_id: int = None, attendance_status: str = None, date_from : str = None, date_to : str = None):
 
   query = db.query(Attendance)
 
   if emp_id:
     query = query.filter(Attendance.user_id == emp_id)
+  if date_from:
+      query = query.filter(Attendance.attendance_date >= date_from)
+  if date_to:
+    query = query.filter(Attendance.attendance_date <= date_to)
   if attendance_status:
     matched_status = next(
       (s for s in AttendanceStatus if s.value.lower() == attendance_status.lower()),
@@ -91,7 +99,7 @@ def query_attendances(db: Session, emp_id: int = None, attendance_status: str = 
 
   return [{ "attendance_date" : a.attendance_date, "attendance_status" : a.status, "attendance_value" : a.status_value } for a in attendances]
 
-SYSTEM_PROMPT = {"role": "system", "content" : "You are a professional HR assistant. Help users look up employee records, reporting hierarchy, job descriptions, and related HR information. When you receive data from a tool, summarize it clearly and naturally. Never return an empty response if the tool returned data. When a tool result contains a numeric value, state that exact number in your response - never recalculate, round, or guess a number yourself."}
+SYSTEM_PROMPT = "You are a professional HR assistant. Help users look up employee records, reporting hierarchy, job descriptions, and related HR information. When you receive data from a tool, summarize it clearly and naturally. Never return an empty response if the tool returned data. When a tool result contains a numeric value, state that exact number in your response - never recalculate, round, or guess a number yourself."
 
 AVAILABLE_TOOLS = {
   "query_employees" : query_employees,
@@ -120,6 +128,8 @@ TOOL_DEFINITIONS = [
             "birth_day": {"type": "integer", "description": "Filter to employees born on this day of the month (1-31), regardless of year/month"},
             "joined_after": {"type": "string", "description": "Only include employees who joined on/after this date (YYYY-MM-DD)"},
             "joined_before": {"type": "string", "description": "Only include employees who joined on/before this date (YYYY-MM-DD)"},
+            "joined_month": {"type": "integer", "description": "Filter to employees who joined in this month (1-12), regardless of year"},
+            "joined_day": {"type": "integer", "description": "Filter to employees who joined on this day of the month (1-31), regardless of year/month"},
             "city": {"type": "string", "description": "City the employee is based in"},
             "state": {"type": "string", "description": "State the employee is based in"},
             "department": {"type": "string", "description": "Department name to filter by"},
@@ -152,8 +162,9 @@ TOOL_DEFINITIONS = [
           "type": "object",
           "properties": {
             "emp_id": {"type": "integer", "description": "employee id to search for"},
-            "attendance_status": {"type": "string", "description": "Filter by attendance status, e.g. 'Present', 'Privilege Leave', 'Sick Leave'"}
-
+            "attendance_status": {"type": "string", "description": "Filter by attendance status, e.g. 'Present', 'Privilege Leave', 'Sick Leave'"},
+            "date_from": {"type": "string", "description": "Only include attendance records on/after this date (YYYY-MM-DD)"},
+            "date_to": {"type": "string", "description": "Only include attendance records on/before this date (YYYY-MM-DD)"}
           }
         }
       }

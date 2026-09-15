@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from openai import OpenAI
 import os
 import json
+from datetime import date
 from dotenv import load_dotenv
 import importlib
 import config
@@ -43,7 +44,13 @@ class ChatRequest(BaseModel):
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest, db: Session = Depends(get_db)):
 
-  messages = [tools.SYSTEM_PROMPT] + request.history + [{"role" : "user", "content": request.message}]
+  today_str = date.today().strftime("%Y-%m-%d")
+  system_message = {
+    "role": "system",
+    "content": f"{tools.SYSTEM_PROMPT}\n\nToday's date is {today_str}. Use this to correctly resolve relative dates like 'this month', 'last week', 'this year', etc."
+  }
+
+  messages = [system_message] + request.history + [{"role" : "user", "content": request.message}]
 
   def stream_reply():
     # Use a loop to allow the AI to make multiple sequential tool calls (Reasoning Loop)

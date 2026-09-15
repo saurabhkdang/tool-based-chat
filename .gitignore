@@ -3,3 +3,4 @@
 /backend/modules/__pycache__/*.*
 *.pyc
 backend/.env
+/backend/__pycache__
