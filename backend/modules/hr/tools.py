@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy import func, or_, extract
-from modules.hr.database import Employee, JobDescription
+from modules.hr.database import Employee, JobDescription, Attendance, AttendanceStatus
 
 def query_employees(db: Session, id: int = None, name: str = None, email: str = None, manager_name: str = None, status: bool = None, under_manager_id: int = None, born_after: str = None, born_before: str = None, birth_month: str = None, birth_day: str = None, joined_after: str = None, joined_before: str = None, city: str = None, state: str = None, department: str = None, buddy_name: str = None, having_jd_id: int = None):
   query = db.query(Employee)
@@ -71,11 +71,32 @@ def query_job_description(db: Session, job_title: str = None, include_employees:
     results.append(entry)
   return results
 
+def query_attendances(db: Session, emp_id: int = None, attendance_status: str = None):
+
+  query = db.query(Attendance)
+
+  if emp_id:
+    query = query.filter(Attendance.user_id == emp_id)
+  if attendance_status:
+    matched_status = next(
+      (s for s in AttendanceStatus if s.value.lower() == attendance_status.lower()),
+      None
+    )
+    if matched_status:
+      query = query.filter(Attendance.status == matched_status )
+    if not matched_status:
+      return {"error": f"Unknown attendance status: '{attendance_status}'"}
+
+  attendances = query.all()
+
+  return [{ "attendance_date" : a.attendance_date, "attendance_status" : a.status, "attendance_value" : a.status_value } for a in attendances]
+
 SYSTEM_PROMPT = {"role": "system", "content" : "You are a professional HR assistant. Help users look up employee records, reporting hierarchy, job descriptions, and related HR information. When you receive data from a tool, summarize it clearly and naturally. Never return an empty response if the tool returned data. When a tool result contains a numeric value, state that exact number in your response - never recalculate, round, or guess a number yourself."}
 
 AVAILABLE_TOOLS = {
   "query_employees" : query_employees,
-  "query_job_description" : query_job_description
+  "query_job_description" : query_job_description,
+  "query_attendances" : query_attendances
 }
 
 TOOL_DEFINITIONS = [
@@ -121,5 +142,20 @@ TOOL_DEFINITIONS = [
         }
       }
     }
-  }
+  },
+  {
+      "type": "function",
+      "function": {
+        "name": "query_attendances",
+        "description": "Search employees attendances",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "emp_id": {"type": "integer", "description": "employee id to search for"},
+            "attendance_status": {"type": "string", "description": "Filter by attendance status, e.g. 'Present', 'Privilege Leave', 'Sick Leave'"}
+
+          }
+        }
+      }
+    }
 ]

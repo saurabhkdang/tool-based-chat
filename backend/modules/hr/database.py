@@ -1,8 +1,9 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, Date, Float, ForeignKey, DateTime, Date
+from sqlalchemy import create_engine, Column, Integer, String, Text, Date, Float, ForeignKey, DateTime, Date, Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 import os
 from dotenv import load_dotenv
+from enum import Enum as PyEnum
 
 load_dotenv()
 
@@ -29,6 +30,7 @@ class Employee(Base):
   department = Column(String(255))
   jd_id = Column(Integer, ForeignKey("api_job_description.id"))
   jd = relationship("JobDescription", back_populates="employees")
+  attendances = relationship("Attendance", back_populates="employees")
 
 class JobDescription(Base):
   __tablename__ = "api_job_description"
@@ -42,6 +44,31 @@ class JobTasks(Base):
   id = Column(Integer, primary_key=True, index=True)
   jd_id = Column(Integer, ForeignKey("api_job_description.id"))
   jobdes = relationship("JobDescription", back_populates="tasks")
+
+class AttendanceStatus(PyEnum):
+  P = "Present"
+  HF = "Half Day"
+  LV = "Leave"
+  FH = "Festive Holiday"
+  WO = "Week Off"
+  SL = "Sick Leave"
+  SLHF = "Sick Leave Half Day"
+  CL = "Casual Leave"
+  CLHF = "Casual Leave Half Day"
+  PL = "Privilege Leave"
+  PLHF = "Privilege Leave Half Day"
+  UL = "U"
+  WFHFD = "Work From Home Full Day"
+  WFHHF = "Work From Home Half Day"
+  FHW = "Fest Holiday Working"
+class Attendance(Base):
+  __tablename__ = "hrdb_users_attendance"
+  id = Column(Integer, primary_key=True, index=True)
+  user_id = Column(Integer, ForeignKey("api_users_hrdb.id"))
+  attendance_date = Column(Date)
+  status = Column(Enum(AttendanceStatus, name="attendance_status"))
+  status_value = Column(Float)
+  employees = relationship("Employee", back_populates="attendances")
 
 def init_db():
   Base.metadata.create_all(bind=engine)
