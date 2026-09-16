@@ -1,4 +1,4 @@
-from modules.hr.functions import query_employees, query_job_description, query_attendances, query_leaves
+from modules.hr.functions import query_employees, query_job_description, query_attendances, query_leaves, query_leave_count, aggregate
 
 SYSTEM_PROMPT = "You are a professional HR assistant. Help users look up employee records, reporting hierarchy, job descriptions, and related HR information. When you receive data from a tool, summarize it clearly and naturally. Never return an empty response if the tool returned data. When a tool result contains a numeric value, state that exact number in your response - never recalculate, round, or guess a number yourself."
 
@@ -10,7 +10,9 @@ AVAILABLE_TOOLS = {
   "query_employees" : query_employees,
   "query_job_description" : query_job_description,
   "query_attendances" : query_attendances,
-  "query_leaves" : query_leaves
+  "query_leaves" : query_leaves,
+  "query_leave_count" : query_leave_count,
+  "aggregate" : aggregate
 }
 
 TOOL_DEFINITIONS = [
@@ -79,7 +81,7 @@ TOOL_DEFINITIONS = [
       "type": "function",
       "function": {
         "name": "query_leaves",
-        "description": "Search employee leave records, including type, status, dates, and approval details. Use this for questions about leave requests, leave balances, or approval status.",
+        "description": "Search employee leave records, including type, status, dates, and approval details. If a leave's dates conflict with actual attendance records (e.g. employee returned early and was marked present), this is flagged in the result. Use this for questions about leave requests, leave balances, or approval status.",
         "parameters": {
           "type": "object",
           "properties": {
@@ -88,6 +90,56 @@ TOOL_DEFINITIONS = [
             "leave_date_from": {"type": "string", "description": "Only include leaves starting on/after this date (YYYY-MM-DD)"},
             "leave_end_to": {"type": "string", "description": "Only include leaves ending on/before this date (YYYY-MM-DD)"}
           }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "query_leave_count",
+        "description": "Get an employee's monthly leave balance metrics: opening/closing/availed/accrued counts for sick leave, casual leave, and privilege leave. Use this for questions about leave balances or how many leaves someone has used/remaining.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "emp_id": {"type": "integer", "description": "Employee id to get leave metrics for"},
+            "from_date": {"type": "string", "description": "Only include months on/after this date (YYYY-MM-DD)"},
+            "to_date": {"type": "string", "description": "Only include months on/before this date (YYYY-MM-DD)"}
+          }
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "aggregate",
+        "description": "Compute aggregate statistics (count, sum, average, min, max) over employees, attendances, leaves, or job descriptions, optionally grouped by a field and filtered. Always use this instead of manually counting/summing individual records for questions involving totals, counts, averages, or breakdowns by category.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "entity": {
+              "type": "string",
+              "enum": ["employees", "attendances", "leaves", "job_description"],
+              "description": "Which type of record to aggregate"
+            },
+            "aggregate_fn": {
+              "type": "string",
+              "enum": ["count", "sum", "avg", "min", "max"],
+              "description": "The aggregation to perform. Use 'count' for how many records match the filters."
+            },
+            "field": {
+              "type": "string",
+              "description": "The field to sum/average/min/max over (not needed for 'count'), e.g. 'total_days'"
+            },
+            "group_by": {
+              "type": "string",
+              "description": "Optional field to group results by, returning one aggregate per group, e.g. 'attendance_status' or 'department'"
+            },
+            "filters": {
+              "type": "object",
+              "description": "Optional filters to narrow down records first, using the same filter names as that entity's query tool, e.g. {\"leave_status\": \"pending\"} or {\"date_from\": \"2026-09-01\", \"date_to\": \"2026-09-16\"}"
+            }
+          },
+          "required": ["entity"]
         }
       }
     }

@@ -1,6 +1,14 @@
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy import func, or_, extract
-from modules.hr.database import Employee, JobDescription, Attendance, AttendanceStatus, Leaves
+from modules.hr.database import Employee, JobDescription, Attendance, AttendanceStatus, Leaves, AttendanceMetrics
+
+WORKING_ATTENDANCE_STATUSES = [
+  AttendanceStatus.P,
+  AttendanceStatus.HF,
+  AttendanceStatus.WFHFD,
+  AttendanceStatus.WFHHF,
+  AttendanceStatus.FHW,
+]
 
 def query_employees(db: Session, id: int = None, name: str = None, email: str = None, manager_name: str = None, status: bool = None, under_manager_id: int = None, born_after: str = None, born_before: str = None, birth_month: str = None, birth_day: str = None, joined_after: str = None, joined_before: str = None, joined_month: str = None, joined_day: str = None, city: str = None, state: str = None, department: str = None, buddy_name: str = None, having_jd_id: int = None):
   query = db.query(Employee)
@@ -113,4 +121,75 @@ def query_leaves(db: Session, emp_id: int = None, leave_status: str = None, leav
 
   leaves = query.all()
 
-  return  [{ "type_of_date" : l.type_of_leave, "start_date" : l.start_date, "end_date" : l.end_date, "total_days" : l.total_days, "status" : l.status, "working_on" : l.working_on, "leave_reason" : l.reason, "leave_action_date" : l.action_date, "leave_action_comment" : l.action_comment, "employee_name" : l.employees.name, "emp_id" : l.user_id } for l in leaves]
+  results = []
+  for l in leaves:
+    entry = { "type_of_date" : l.type_of_leave, "start_date" : l.start_date, "end_date" : l.end_date, "total_days" : l.total_days, "status" : l.status, "working_on" : l.working_on, "leave_reason" : l.reason, "leave_action_date" : l.action_date, "leave_action_comment" : l.action_comment, "employee_name" : l.employees.name, "emp_id" : l.user_id }
+
+    if l.start_date and l.end_date:
+      conflicts = db.query(Attendance).filter(
+        Attendance.user_id == l.user_id,
+        Attendance.attendance_date >= l.start_date,
+        Attendance.attendance_date <= l.end_date,
+        Attendance.status.in_(WORKING_ATTENDANCE_STATUSES)
+      ).all()
+
+      if conflicts:
+        conflict_dates = ", ".join(str(c.attendance_date) for c in conflicts)
+        entry["attendance_conflicts"] = f"Marked as working on {conflict_dates} despite this approved leave covering that period."
+    results.append(entry)
+  return results
+
+def query_leave_count(db: Session, emp_id: int = None, from_date: str = None, to_date: str = None):
+  query = db.query(AttendanceMetrics)
+  if emp_id:
+    query = query.filter(AttendanceMetrics.user_id == emp_id)
+  if from_date:
+    query = query.filter(AttendanceMetrics.month_year>= from_date)
+  if to_date:
+    query = query.filter(AttendanceMetrics.month_year<= to_date)
+
+  leaves = query.all()
+
+  return [{
+    "user_id" : l.user_id,     "month_year" : l.month_year,     "closing_sl" : l.closing_sl,     "closing_cl" : l.closing_cl,     "closing_pl" : l.closing_pl,     "availed_sl" : l.availed_sl,     "availed_cl" : l.availed_cl,     "availed_pl" : l.availed_pl,     "accural_sl" : l.accural_sl,     "accural_cl" : l.accural_cl,     "accural_pl" : l.accural_pl,     "opening_sl" : l.opening_sl,     "opening_cl" : l.opening_cl,     "opening_pl" : l.opening_pl } for l in leaves]
+
+ENTITY_FUNCTIONS = {
+  "employees" : query_employees,
+  "attendances" : query_attendances,
+  "leaves" : query_leaves,
+  "job_description" : query_job_description
+}
+
+def aggregate(db: Session, entity: str, aggregate_fn: str = "count", field: str = None, group_by: str = None, filters: dict = None):
+  if entity not in ENTITY_FUNCTIONS:
+    return {"error" : f"Unknown entity '{entity}'. Valid options : {list(ENTITY_FUNCTIONS.keys())} "}
+
+  rows = ENTITY_FUNCTIONS[entity](db=db, **(filters or {}))
+  if isinstance(rows, dict) and "error" in rows:
+    return rows
+
+  def compute(group_rows):
+    if aggregate_fn == "count":
+      return len(group_rows)
+    values = [r.get(field) for r in group_rows if r.get(field) is not None]
+    if not values:
+      return 0
+    if aggregate_fn == "sum":
+      return sum(values)
+    if aggregate_fn == "avg":
+      return sum(values) / len(values)
+    if aggregate_fn == "min":
+      return min(values)
+    if aggregate_fn == "max":
+      return max(values)
+    
+    return {"error" : f"Unknown aggregate_fn '{aggregate_fn}'"}
+
+  if group_by:
+    groups = {}
+    for row in rows:
+      key = row.get(group_by)
+      groups.setdefault(key, []).append(row)
+    return {str(k) : compute(v) for k, v in groups.items()}
+
+  return {aggregate_fn: compute(rows)}

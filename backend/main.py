@@ -55,7 +55,7 @@ async def chat_endpoint(request: ChatRequest, db: Session = Depends(get_db)):
   today_str = date.today().strftime("%Y-%m-%d")
   system_message = {
     "role": "system",
-    "content": f"{tools.SYSTEM_PROMPT}\n\nToday's date is {today_str}. Use this to correctly resolve relative dates like 'this month', 'last week', 'this year', etc. Also always use the \"16 Sept 2026\" format for all days while displaying"
+    "content": f"{tools.SYSTEM_PROMPT}\n\nToday's date is {today_str}. Use this to correctly resolve relative dates like 'this month', 'last week', 'this year', etc. Always use the \"16 Sept 2026\" format for all dates while displaying"
   }
 
   messages = [system_message] + request.history + [{"role" : "user", "content": request.message}]
