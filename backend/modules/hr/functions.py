@@ -105,7 +105,7 @@ def query_attendances(db: Session, emp_id: int = None, attendance_status: str = 
 
   attendances = query.all()
 
-  return [{ "attendance_date" : a.attendance_date, "attendance_status" : a.status, "attendance_value" : a.status_value } for a in attendances]
+  return [{ "attendance_date" : a.attendance_date, "attendance_status" : a.status.value if a.status else None, "attendance_value" : a.status_value } for a in attendances]
 
 def query_leaves(db: Session, emp_id: int = None, leave_status: str = None, leave_date_from: str = None, leave_end_to: str = None):
 
@@ -123,7 +123,7 @@ def query_leaves(db: Session, emp_id: int = None, leave_status: str = None, leav
 
   results = []
   for l in leaves:
-    entry = { "type_of_date" : l.type_of_leave, "start_date" : l.start_date, "end_date" : l.end_date, "total_days" : l.total_days, "status" : l.status, "working_on" : l.working_on, "leave_reason" : l.reason, "leave_action_date" : l.action_date, "leave_action_comment" : l.action_comment, "employee_name" : l.employees.name, "emp_id" : l.user_id }
+    entry = { "type_of_leave" : l.type_of_leave.value if l.type_of_leave else None, "start_date" : l.start_date, "end_date" : l.end_date, "total_days" : l.total_days, "status" : l.status, "working_on" : l.working_on, "leave_reason" : l.reason, "leave_action_date" : l.action_date, "leave_action_comment" : l.action_comment, "employee_name" : l.employees.name, "emp_id" : l.user_id }
 
     if l.start_date and l.end_date:
       conflicts = db.query(Attendance).filter(
@@ -177,7 +177,7 @@ def aggregate(db: Session, entity: str, aggregate_fn: str = "count", field: str 
     if aggregate_fn == "sum":
       return sum(values)
     if aggregate_fn == "avg":
-      return sum(values) / len(values)
+      return round(sum(values) / len(values), 2)
     if aggregate_fn == "min":
       return min(values)
     if aggregate_fn == "max":
