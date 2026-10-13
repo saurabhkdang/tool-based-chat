@@ -4,7 +4,6 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from openai import OpenAI
-import os
 import json
 from datetime import date
 from dotenv import load_dotenv
@@ -29,8 +28,8 @@ app.add_middleware(
 )
 
 client = OpenAI(
-    base_url="http://localhost:11434/v1", 
-    api_key=os.getenv("OLLAMA_API_KEY")
+    base_url=config.LLM_BASE_URL,
+    api_key=config.LLM_API_KEY
 )
 
 @app.on_event("startup")
@@ -64,7 +63,7 @@ async def chat_endpoint(request: ChatRequest, db: Session = Depends(get_db)):
     # Use a loop to allow the AI to make multiple sequential tool calls (Reasoning Loop)
     while True:
       stream = client.chat.completions.create(
-        model="gemma4:31b-cloud",
+        model=config.LLM_MODEL,
         messages=messages,
         tools=tools.TOOL_DEFINITIONS,
         tool_choice="auto",
