@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy import func, or_, extract
-from modules.hr.database import Employee, JobDescription, Attendance, AttendanceStatus, Leaves, AttendanceMetrics
+from modules.hr.database import Employee, JobDescription, Attendance, AttendanceStatus, Leaves, AttendanceMetrics, EmployeeRating
 
 WORKING_ATTENDANCE_STATUSES = [
   AttendanceStatus.P,
@@ -152,6 +152,22 @@ def query_leave_count(db: Session, emp_id: int = None, from_date: str = None, to
 
   return [{
     "user_id" : l.user_id,     "month_year" : l.month_year,     "closing_sl" : l.closing_sl,     "closing_cl" : l.closing_cl,     "closing_pl" : l.closing_pl,     "availed_sl" : l.availed_sl,     "availed_cl" : l.availed_cl,     "availed_pl" : l.availed_pl,     "accural_sl" : l.accural_sl,     "accural_cl" : l.accural_cl,     "accural_pl" : l.accural_pl,     "opening_sl" : l.opening_sl,     "opening_cl" : l.opening_cl,     "opening_pl" : l.opening_pl } for l in leaves]
+
+def query_employee_monthly_rating(db: Session, emp_id: int = None, start_month: str = None, end_month: str = None, performance: str = None, comment: str = None):
+  query = db.query(EmployeeRating)
+  if emp_id:
+    query = query.filter(EmployeeRating.user_id == emp_id)
+  if start_month:
+    query = query.filter(EmployeeRating.dated >= start_month)
+  if end_month:
+    query = query.filter(EmployeeRating.dated <= end_month)
+  if performance:
+    query = query.filter(EmployeeRating.performance.ilike(f"%{performance}%"))
+  if comment:
+    query = query.filter(EmployeeRating.comment.ilike(f"%{comment}%"))
+
+  ratings = query.all()
+  return [{ "user_id": r.user_id, "dated" : r.dated, "performance" : r.performance, "comment" : r.comment } for r in ratings]
 
 ENTITY_FUNCTIONS = {
   "employees" : query_employees,

@@ -33,6 +33,7 @@ class Employee(Base):
   attendances = relationship("Attendance", back_populates="employees")
   leaves = relationship("Leaves", back_populates="employees")
   metrics = relationship("AttendanceMetrics", back_populates="employees")
+  ratings = relationship("EmployeeRating", back_populates="employees")
 
 class JobDescription(Base):
   __tablename__ = "api_job_description"
@@ -105,6 +106,16 @@ class AttendanceMetrics(Base):
   opening_cl = Column(Float)
   opening_pl = Column(Float)
   employees = relationship("Employee", back_populates="metrics")
+
+class EmployeeRating(Base):
+  __tablename__ = "api_users_performance"
+  id = Column(Integer, primary_key=True, index=True)
+  user_id = Column(Integer, ForeignKey("api_users_hrdb.id"))
+  dated = Column(Date)
+  performance = Column(String(50))
+  comment = Column(String(500))
+  added_on = Column(DateTime)
+  employees = relationship("Employee", back_populates="ratings")
 
 def init_db():
   Base.metadata.create_all(bind=engine)
