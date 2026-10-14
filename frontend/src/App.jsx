@@ -21,6 +21,7 @@ function App(){
     welcome_message: 'Hello! How can I help you today?'
   });
   const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({behavior: "smooth"});
@@ -29,6 +30,12 @@ function App(){
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      inputRef.current?.focus();
+    }
+  }, [isLoading]);
 
   useEffect(() => {
     fetch(`${API_BASE}/module-info`)
@@ -143,6 +150,7 @@ function App(){
 
       <form className="input-area" onSubmit={sendMessage}>
         <input
+          ref={inputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
