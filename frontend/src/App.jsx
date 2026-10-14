@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './App.css';
 
-const API_BASE = 'http://172.16.0.21:8000';
+const API_BASE = 'http://127.0.0.1:8000';
 
 const markdownComponents = {
   table: ({ node, ...props }) => (
