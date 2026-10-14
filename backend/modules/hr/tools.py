@@ -52,12 +52,13 @@ TOOL_DEFINITIONS = [
     "type": "function",
     "function": {
       "name": "query_job_description",
-      "description": "Search job descriptions/titles, and optionally list the employees currently assigned to each one. Use this for questions about job roles, job titles, or who holds a given job description.",
+      "description": "Search job descriptions/titles, and optionally list the employees assigned to each one and/or the detailed task breakdown (skills required, responsibilities, etc.). Use this for questions about job roles, job titles, who holds a given job description, or what a role actually involves.",
       "parameters": {
         "type": "object",
         "properties": {
           "job_title": {"type": "string", "description": "Full or partial job title to search for"},
-          "include_employees": {"type": "boolean", "description": "Set true to also include the employees assigned to each matching job description"}
+          "include_employees": {"type": "boolean", "description": "Set true to also include the employees assigned to each matching job description"},
+          "include_details": {"type": "boolean", "description": "Set true to also include the detailed task/skill breakdown for each matching job description"}
         }
       }
     }

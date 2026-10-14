@@ -65,7 +65,7 @@ def query_employees(db: Session, id: int = None, name: str = None, email: str = 
     "id": e.id, "name" : e.name, "email": e.email, "manager": e.manager.name, "doj": e.doj, "department": e.department, "city": e.city
   } for e in employees]
 
-def query_job_description(db: Session, job_title: str = None, include_employees: bool = False):
+def query_job_description(db: Session, job_title: str = None, include_employees: bool = False, include_details: bool = False):
   query = db.query(JobDescription)
   if job_title:
     query = query.filter(JobDescription.job_title.ilike(f"%{job_title}%"))
@@ -80,6 +80,8 @@ def query_job_description(db: Session, job_title: str = None, include_employees:
     if include_employees:
       emps = db.query(Employee).filter(Employee.jd_id == j.id).all()
       entry["employees"] = [{"id" : e.id, "name" : e.name, "email" : e.email } for e in emps]
+    if include_details:
+      entry["description"] = [{"type" : t.type, "description" : t.description, "last_updated" : t.last_updated} for t in j.tasks]
     results.append(entry)
   return results
 

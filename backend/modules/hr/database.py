@@ -46,6 +46,9 @@ class JobTasks(Base):
   __tablename__ = "hrdb_job_description_details"
   id = Column(Integer, primary_key=True, index=True)
   jd_id = Column(Integer, ForeignKey("api_job_description.id"))
+  type = Column(String(100))
+  description = Column(Text)
+  last_updated = Column(DateTime)
   jobdes = relationship("JobDescription", back_populates="tasks")
 
 class AttendanceStatus(PyEnum):
