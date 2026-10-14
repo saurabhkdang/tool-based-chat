@@ -62,7 +62,8 @@ def query_employees(db: Session, id: int = None, name: str = None, email: str = 
   if not employees:
     return {"error" : "No employees found matching the given criteria"}
   return [{
-    "id": e.id, "name" : e.name, "email": e.email, "manager": e.manager.name, "doj": e.doj, "department": e.department, "city": e.city
+    "id": e.id, "name" : e.name, "email": e.email, "manager": e.manager.name, "doj": e.doj,
+    "department": e.department, "city": e.city, "job_title": e.jd.job_title if e.jd else None
   } for e in employees]
 
 def query_job_description(db: Session, job_title: str = None, include_employees: bool = False, include_details: bool = False):
