@@ -110,7 +110,7 @@ def query_attendances(db: Session, emp_id: int = None, attendance_status: str = 
 
   return [{ "attendance_date" : a.attendance_date, "attendance_status" : a.status.value if a.status else None, "attendance_value" : a.status_value } for a in attendances]
 
-def query_leaves(db: Session, emp_id: int = None, leave_status: str = None, leave_date_from: str = None, leave_end_to: str = None):
+def query_leaves(db: Session, emp_id: int = None, leave_status: str = None, leave_date_from: str = None, leave_end_to: str = None, added_on_from: str = None, added_on_to: str = None):
 
   query = db.query(Leaves)
   if emp_id:
@@ -121,12 +121,16 @@ def query_leaves(db: Session, emp_id: int = None, leave_status: str = None, leav
     query = query.filter(Leaves.end_date <= leave_end_to)
   if leave_status:
     query = query.filter(Leaves.status.ilike(leave_status))
+  if added_on_from:
+    query = query.filter(Leaves.added_on >= added_on_from)
+  if added_on_to:
+    query = query.filter(Leaves.added_on <= added_on_to)
 
   leaves = query.all()
 
   results = []
   for l in leaves:
-    entry = { "type_of_leave" : l.type_of_leave.value if l.type_of_leave else None, "start_date" : l.start_date, "end_date" : l.end_date, "total_days" : l.total_days, "status" : l.status, "working_on" : l.working_on, "leave_reason" : l.reason, "leave_action_date" : l.action_date, "leave_action_comment" : l.action_comment, "employee_name" : l.employees.name, "emp_id" : l.user_id }
+    entry = { "type_of_leave" : l.type_of_leave.value if l.type_of_leave else None, "start_date" : l.start_date, "end_date" : l.end_date, "total_days" : l.total_days, "status" : l.status, "working_on" : l.working_on, "leave_reason" : l.reason, "leave_action_date" : l.action_date, "leave_action_comment" : l.action_comment, "employee_name" : l.employees.name, "emp_id" : l.user_id, "applied_on" : l.added_on }
 
     if l.start_date and l.end_date:
       conflicts = db.query(Attendance).filter(

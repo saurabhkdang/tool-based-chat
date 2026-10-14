@@ -89,6 +89,7 @@ class Leaves(Base):
   reason = Column(String(500))
   action_date = Column(Date)
   action_comment = Column(String(500))
+  added_on = Column(DateTime)
   employees = relationship("Employee", back_populates="leaves")
 
 class AttendanceMetrics(Base):

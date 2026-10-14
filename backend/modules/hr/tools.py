@@ -90,7 +90,9 @@ TOOL_DEFINITIONS = [
             "emp_id": {"type": "integer", "description": "Employee id to search leave records for"},
             "leave_status": {"type": "string", "description": "Filter by leave approval status: 'approved', 'pending', or 'rejected'"},
             "leave_date_from": {"type": "string", "description": "Only include leaves starting on/after this date (YYYY-MM-DD)"},
-            "leave_end_to": {"type": "string", "description": "Only include leaves ending on/before this date (YYYY-MM-DD)"}
+            "leave_end_to": {"type": "string", "description": "Only include leaves ending on/before this date (YYYY-MM-DD)"},
+            "added_on_from": {"type": "string", "description": "Only include leaves applied for on/after this date (YYYY-MM-DD)"},
+            "added_on_to": {"type": "string", "description": "Only include leaves applied for on/before this date (YYYY-MM-DD)"}
           }
         }
       }
