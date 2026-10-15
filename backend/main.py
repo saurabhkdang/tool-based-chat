@@ -158,7 +158,7 @@ async def chat_endpoint(request: ChatRequest, db: Session = Depends(get_db)):
           "role": "tool",
           "tool_call_id": tc["id"],
           "name": function_name,
-          "content": str(result)
+          "content": json.dumps(result, default=str)
         })
 
   return StreamingResponse(stream_reply(), media_type="text/plain")

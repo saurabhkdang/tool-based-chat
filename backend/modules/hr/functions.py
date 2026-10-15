@@ -1,3 +1,4 @@
+from datetime import date
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy import func, or_, extract
 from modules.hr.database import Employee, JobDescription, Attendance, AttendanceStatus, Leaves, AttendanceMetrics, EmployeeRating
@@ -132,7 +133,7 @@ def query_attendances(db: Session, emp_id: int = None, employee_name: str = None
 
   return [{ "attendance_date" : a.attendance_date, "attendance_status" : a.status.value if a.status else None, "attendance_value" : a.status_value } for a in attendances]
 
-def query_leaves(db: Session, emp_id: int = None, employee_name: str = None, leave_status: str = None, leave_date_from: str = None, leave_end_to: str = None, added_on_from: str = None, added_on_to: str = None):
+def query_leaves(db: Session, emp_id: int = None, employee_name: str = None, leave_status: str = None, upcoming: bool = False, leave_date_from: str = None, leave_end_to: str = None, added_on_from: str = None, added_on_to: str = None):
   emp_id, error = resolve_employee(db, emp_id, employee_name)
   if error:
     return error
@@ -150,8 +151,10 @@ def query_leaves(db: Session, emp_id: int = None, employee_name: str = None, lea
     query = query.filter(Leaves.added_on >= added_on_from)
   if added_on_to:
     query = query.filter(Leaves.added_on <= added_on_to)
+  if upcoming:
+    query = query.filter(Leaves.end_date >= date.today())
 
-  leaves = query.all()
+  leaves = query.order_by(Leaves.start_date).all()
 
   results = []
   for l in leaves:
