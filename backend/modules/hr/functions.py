@@ -10,6 +10,25 @@ WORKING_ATTENDANCE_STATUSES = [
   AttendanceStatus.FHW,
 ]
 
+def resolve_employee(db: Session, emp_id: int = None, employee_name: str = None):
+  if emp_id:
+    if not db.query(Employee.id).filter(Employee.id == emp_id).first():
+      return None, {"error": f"No employee exists with id {emp_id}. Look the employee up by name with query_employees instead of guessing an id."}
+    return emp_id, None
+
+  if employee_name:
+    matches = db.query(Employee).filter(Employee.name.ilike(f"%{employee_name}%")).all()
+    if not matches:
+      return None, {"error": f"No employee found matching name '{employee_name}'."}
+    if len(matches) > 1:
+      return None, {
+        "error": f"Multiple employees match '{employee_name}'. Ask the user which one they mean.",
+        "matches": [{"id": e.id, "name": e.name, "active": e.status == 1} for e in matches]
+      }
+    return matches[0].id, None
+
+  return None, None
+
 def query_employees(db: Session, id: int = None, name: str = None, email: str = None, manager_name: str = None, status: bool = None, under_manager_id: int = None, born_after: str = None, born_before: str = None, birth_month: str = None, birth_day: str = None, joined_after: str = None, joined_before: str = None, joined_month: str = None, joined_day: str = None, city: str = None, state: str = None, department: str = None, buddy_name: str = None, having_jd_id: int = None):
   query = db.query(Employee)
 
@@ -86,7 +105,10 @@ def query_job_description(db: Session, job_title: str = None, include_employees:
     results.append(entry)
   return results
 
-def query_attendances(db: Session, emp_id: int = None, attendance_status: str = None, date_from : str = None, date_to : str = None):
+def query_attendances(db: Session, emp_id: int = None, employee_name: str = None, attendance_status: str = None, date_from : str = None, date_to : str = None):
+  emp_id, error = resolve_employee(db, emp_id, employee_name)
+  if error:
+    return error
 
   query = db.query(Attendance)
 
@@ -110,7 +132,10 @@ def query_attendances(db: Session, emp_id: int = None, attendance_status: str = 
 
   return [{ "attendance_date" : a.attendance_date, "attendance_status" : a.status.value if a.status else None, "attendance_value" : a.status_value } for a in attendances]
 
-def query_leaves(db: Session, emp_id: int = None, leave_status: str = None, leave_date_from: str = None, leave_end_to: str = None, added_on_from: str = None, added_on_to: str = None):
+def query_leaves(db: Session, emp_id: int = None, employee_name: str = None, leave_status: str = None, leave_date_from: str = None, leave_end_to: str = None, added_on_from: str = None, added_on_to: str = None):
+  emp_id, error = resolve_employee(db, emp_id, employee_name)
+  if error:
+    return error
 
   query = db.query(Leaves)
   if emp_id:
@@ -146,7 +171,10 @@ def query_leaves(db: Session, emp_id: int = None, leave_status: str = None, leav
     results.append(entry)
   return results
 
-def query_leave_count(db: Session, emp_id: int = None, from_date: str = None, to_date: str = None):
+def query_leave_count(db: Session, emp_id: int = None, employee_name: str = None, from_date: str = None, to_date: str = None):
+  emp_id, error = resolve_employee(db, emp_id, employee_name)
+  if error:
+    return error
   query = db.query(AttendanceMetrics)
   if emp_id:
     query = query.filter(AttendanceMetrics.user_id == emp_id)
@@ -160,7 +188,10 @@ def query_leave_count(db: Session, emp_id: int = None, from_date: str = None, to
   return [{
     "user_id" : l.user_id,     "month_year" : l.month_year,     "closing_sl" : l.closing_sl,     "closing_cl" : l.closing_cl,     "closing_pl" : l.closing_pl,     "availed_sl" : l.availed_sl,     "availed_cl" : l.availed_cl,     "availed_pl" : l.availed_pl,     "accural_sl" : l.accural_sl,     "accural_cl" : l.accural_cl,     "accural_pl" : l.accural_pl,     "opening_sl" : l.opening_sl,     "opening_cl" : l.opening_cl,     "opening_pl" : l.opening_pl } for l in leaves]
 
-def query_employee_monthly_rating(db: Session, emp_id: int = None, start_month: str = None, end_month: str = None, performance: str = None, comment: str = None):
+def query_employee_monthly_rating(db: Session, emp_id: int = None, employee_name: str = None, start_month: str = None, end_month: str = None, performance: str = None, comment: str = None):
+  emp_id, error = resolve_employee(db, emp_id, employee_name)
+  if error:
+    return error
   query = db.query(EmployeeRating)
   if emp_id:
     query = query.filter(EmployeeRating.user_id == emp_id)

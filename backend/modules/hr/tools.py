@@ -1,6 +1,6 @@
 from modules.hr.functions import query_employees, query_job_description, query_attendances, query_leaves, query_leave_count, aggregate, query_employee_monthly_rating
 
-SYSTEM_PROMPT = "You are a professional HR assistant. Help users look up employee records, reporting hierarchy, job descriptions, and related HR information. When you receive data from a tool, summarize it clearly and naturally. Never return an empty response if the tool returned data. When a tool result contains a numeric value, state that exact number in your response - never recalculate, round, or guess a number yourself."
+SYSTEM_PROMPT = "You are a professional HR assistant. Help users look up employee records, reporting hierarchy, job descriptions, and related HR information. When you receive data from a tool, summarize it clearly and naturally. Never return an empty response if the tool returned data. When a tool result contains a numeric value, state that exact number in your response - never recalculate, round, or guess a number yourself. Never invent or guess an employee id: when the user refers to someone by name, pass employee_name to the tool (or look them up with query_employees first). If a tool reports that multiple employees match a name, list the matches and ask the user which one they mean instead of picking one."
 
 DISPLAY_NAME = "AI HR Assistant"
 DISPLAY_SUBTITLE = "Ask about employees, hierarchy, attendance & job descriptions"
@@ -71,7 +71,8 @@ TOOL_DEFINITIONS = [
         "parameters": {
           "type": "object",
           "properties": {
-            "emp_id": {"type": "integer", "description": "employee id to search for"},
+            "emp_id": {"type": "integer", "description": "Employee id, only if already known from a previous tool result"},
+            "employee_name": {"type": "string", "description": "Full or partial employee name - use this when the user refers to someone by name"},
             "attendance_status": {"type": "string", "description": "Filter by attendance status, e.g. 'Present', 'Privilege Leave', 'Sick Leave'"},
             "date_from": {"type": "string", "description": "Only include attendance records on/after this date (YYYY-MM-DD)"},
             "date_to": {"type": "string", "description": "Only include attendance records on/before this date (YYYY-MM-DD)"}
@@ -87,7 +88,8 @@ TOOL_DEFINITIONS = [
         "parameters": {
           "type": "object",
           "properties": {
-            "emp_id": {"type": "integer", "description": "Employee id to search leave records for"},
+            "emp_id": {"type": "integer", "description": "Employee id, only if already known from a previous tool result"},
+            "employee_name": {"type": "string", "description": "Full or partial employee name - use this when the user refers to someone by name"},
             "leave_status": {"type": "string", "description": "Filter by leave approval status: 'approved', 'pending', or 'rejected'"},
             "leave_date_from": {"type": "string", "description": "Only include leaves starting on/after this date (YYYY-MM-DD)"},
             "leave_end_to": {"type": "string", "description": "Only include leaves ending on/before this date (YYYY-MM-DD)"},
@@ -105,7 +107,8 @@ TOOL_DEFINITIONS = [
         "parameters": {
           "type": "object",
           "properties": {
-            "emp_id": {"type": "integer", "description": "Employee id to get leave metrics for"},
+            "emp_id": {"type": "integer", "description": "Employee id, only if already known from a previous tool result"},
+            "employee_name": {"type": "string", "description": "Full or partial employee name - use this when the user refers to someone by name"},
             "from_date": {"type": "string", "description": "Only include months on/after this date (YYYY-MM-DD)"},
             "to_date": {"type": "string", "description": "Only include months on/before this date (YYYY-MM-DD)"}
           }
@@ -155,7 +158,8 @@ TOOL_DEFINITIONS = [
         "parameters": {
           "type": "object",
           "properties": {
-            "emp_id": {"type": "integer", "description": "Employee id to get performance ratings for"},
+            "emp_id": {"type": "integer", "description": "Employee id, only if already known from a previous tool result"},
+            "employee_name": {"type": "string", "description": "Full or partial employee name - use this when the user refers to someone by name"},
             "start_month": {"type": "string", "description": "Only include ratings on/after this date (YYYY-MM-DD)"},
             "end_month": {"type": "string", "description": "Only include ratings on/before this date (YYYY-MM-DD)"},
             "performance": {

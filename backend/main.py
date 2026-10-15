@@ -5,6 +5,9 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from openai import OpenAI
 import json
+import os
+import uuid
+import logging
 from datetime import date
 from dotenv import load_dotenv
 import importlib
@@ -17,6 +20,22 @@ get_db = database.get_db
 init_db = database.init_db
 
 load_dotenv()
+
+os.makedirs("logs", exist_ok=True)
+logging.basicConfig(
+  level=logging.INFO,
+  format="%(asctime)s [%(levelname)s] %(message)s",
+  handlers=[
+    logging.FileHandler("logs/chat.log", encoding="utf-8"),
+    logging.StreamHandler()
+  ]
+)
+logger = logging.getLogger("chatbot")
+
+def _truncate(value, limit=2000):
+  text = str(value)
+  return text if len(text) <= limit else text[:limit] + f"...[truncated, {len(text)} chars total]"
+
 app = FastAPI()
 
 app.add_middleware(
@@ -50,6 +69,9 @@ def module_info():
 
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest, db: Session = Depends(get_db)):
+
+  request_id = uuid.uuid4().hex[:8]
+  logger.info(f"[{request_id}] Prompt: {request.message}")
 
   today_str = date.today().strftime("%Y-%m-%d")
   system_message = {
@@ -92,6 +114,7 @@ async def chat_endpoint(request: ChatRequest, db: Session = Depends(get_db)):
 
       if not tool_calls_acc:
         # AI has finished reasoning and streamed its final answer
+        logger.info(f"[{request_id}] Final response: {_truncate(content_acc)}")
         break
 
       # AI wants to call tools, so we record the request and execute them
@@ -112,16 +135,24 @@ async def chat_endpoint(request: ChatRequest, db: Session = Depends(get_db)):
         try:
           args = json.loads(tc["arguments"]) if tc["arguments"] else {}
         except json.JSONDecodeError:
+          logger.warning(f"[{request_id}] Could not parse arguments for {function_name}: {tc['arguments']}")
           args = {}
+
+        logger.info(f"[{request_id}] Tool call: {function_name}({args})")
 
         if function_name in tools.AVAILABLE_TOOLS:
           tool_func = tools.AVAILABLE_TOOLS[function_name]
           try:
             result = tool_func(db=db, **args)
           except Exception as e:
+            logger.error(f"[{request_id}] Tool {function_name} raised: {e}")
             result = {"error": f"Tool '{function_name}' failed: {e}"}
         else:
+          logger.warning(f"[{request_id}] Unknown tool requested: {function_name}")
           result = {"error": f"Unknown tool '{function_name}'"}
+
+        result_count = len(result) if isinstance(result, list) else None
+        logger.info(f"[{request_id}] Tool result ({result_count} rows): {_truncate(result)}" if result_count is not None else f"[{request_id}] Tool result: {_truncate(result)}")
 
         messages.append({
           "role": "tool",
