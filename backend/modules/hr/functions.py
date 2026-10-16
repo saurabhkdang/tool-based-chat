@@ -96,7 +96,7 @@ def query_employees(db: Session, id: int = None, name: str = None, email: str = 
   if not employees:
     return {"error" : "No employees found matching the given criteria"}
   return [{
-    "id": e.id, "name" : e.name, "email": e.email, "manager": e.manager.name, "doj": e.doj,
+    "id": e.id, "name" : e.name, "email": e.email, "manager": e.manager.name if e.manager else None, "doj": e.doj,
     "department": e.department, "city": e.city, "job_title": e.jd.job_title if e.jd else None
   } for e in employees]
 
@@ -172,7 +172,7 @@ def query_leaves(db: Session, emp_id: int = None, employee_name: str = None, lea
 
   results = []
   for l in leaves:
-    entry = { "type_of_leave" : l.type_of_leave.value if l.type_of_leave else None, "start_date" : l.start_date, "end_date" : l.end_date, "total_days" : l.total_days, "status" : l.status, "working_on" : l.working_on, "leave_reason" : l.reason, "leave_action_date" : l.action_date, "leave_action_comment" : l.action_comment, "employee_name" : l.employees.name, "emp_id" : l.user_id, "applied_on" : l.added_on }
+    entry = { "type_of_leave" : l.type_of_leave.value if l.type_of_leave else None, "start_date" : l.start_date, "end_date" : l.end_date, "total_days" : l.total_days, "status" : l.status, "working_on" : l.working_on, "leave_reason" : l.reason, "leave_action_date" : l.action_date, "leave_action_comment" : l.action_comment, "employee_name" : l.employees.name if l.employees else None, "emp_id" : l.user_id, "applied_on" : l.added_on }
 
     if l.start_date and l.end_date:
       conflicts = db.query(Attendance).filter(
@@ -222,7 +222,7 @@ def query_employee_monthly_rating(db: Session, emp_id: int = None, employee_name
     query = query.filter(EmployeeRating.comment.ilike(f"%{comment}%"))
 
   ratings = query.all()
-  return [{ "user_id": r.user_id, "dated" : r.dated, "performance" : r.performance, "comment" : r.comment } for r in ratings]
+  return [{ "user_id": r.user_id, "employee_name": r.employees.name if r.employees else None, "dated" : r.dated, "performance" : r.performance, "comment" : r.comment } for r in ratings]
 
 ENTITY_FUNCTIONS = {
   "employees" : query_employees,
