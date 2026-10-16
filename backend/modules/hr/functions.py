@@ -1,6 +1,6 @@
 from datetime import date
 from sqlalchemy.orm import Session, aliased
-from sqlalchemy import func, or_, extract
+from sqlalchemy import func, or_, and_, extract
 from modules.hr.database import Employee, JobDescription, Attendance, AttendanceStatus, Leaves, AttendanceMetrics, EmployeeRating
 
 WORKING_ATTENDANCE_STATUSES = [
@@ -11,20 +11,34 @@ WORKING_ATTENDANCE_STATUSES = [
   AttendanceStatus.FHW,
 ]
 
+def name_or_email_filter(text: str):
+  # Every word must appear in the name or the email, e.g. "manish kumar michael"
+  # matches name "Manish Kumar" with email "michael@...".
+  words = text.split()
+  return and_(*[or_(Employee.name.ilike(f"%{w}%"), Employee.email.ilike(f"%{w}%")) for w in words])
+
 def resolve_employee(db: Session, emp_id: int = None, employee_name: str = None):
   if emp_id:
     if not db.query(Employee.id).filter(Employee.id == emp_id).first():
       return None, {"error": f"No employee exists with id {emp_id}. Look the employee up by name with query_employees instead of guessing an id."}
     return emp_id, None
 
-  if employee_name:
-    matches = db.query(Employee).filter(Employee.name.ilike(f"%{employee_name}%")).all()
+  if employee_name and employee_name.strip():
+    matches = db.query(Employee).filter(name_or_email_filter(employee_name)).all()
     if not matches:
-      return None, {"error": f"No employee found matching name '{employee_name}'."}
+      return None, {"error": f"No employee found matching '{employee_name}' in name or email."}
+
+    exact = [e for e in matches if (e.name or "").strip().lower() == employee_name.strip().lower()]
+    if len(exact) == 1:
+      return exact[0].id, None
+
     if len(matches) > 1:
       return None, {
-        "error": f"Multiple employees match '{employee_name}'. Ask the user which one they mean.",
-        "matches": [{"id": e.id, "name": e.name, "active": e.status == 1} for e in matches]
+        "error": f"Multiple employees match '{employee_name}'. Ask the user which one they mean before answering any part of the question.",
+        "matches": [{
+          "id": e.id, "name": e.name, "email": e.email,
+          "job_title": e.jd.job_title if e.jd else None, "active": e.status == 1
+        } for e in matches]
       }
     return matches[0].id, None
 
@@ -47,7 +61,7 @@ def query_employees(db: Session, id: int = None, name: str = None, email: str = 
   if id:
     query = query.filter(Employee.id == id)
   if name:
-    query = query.filter(Employee.name.ilike(f"%{name}%"))
+    query = query.filter(name_or_email_filter(name))
   if email:
     query = query.filter(Employee.email.ilike(f"%{email}%"))
   if status is not None:

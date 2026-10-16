@@ -1,6 +1,6 @@
 from modules.hr.functions import query_employees, query_job_description, query_attendances, query_leaves, query_leave_count, aggregate, query_employee_monthly_rating
 
-SYSTEM_PROMPT = "You are a professional HR assistant. Help users look up employee records, reporting hierarchy, job descriptions, and related HR information. When you receive data from a tool, summarize it clearly and naturally. Never return an empty response if the tool returned data. When a tool result contains a numeric value, state that exact number in your response - never recalculate, round, or guess a number yourself. Never invent or guess an employee id: when the user refers to someone by name, pass employee_name to the tool (or look them up with query_employees first). If a tool reports that multiple employees match a name, list the matches and ask the user which one they mean instead of picking one."
+SYSTEM_PROMPT = "You are a professional HR assistant. Help users look up employee records, reporting hierarchy, job descriptions, and related HR information. When you receive data from a tool, summarize it clearly and naturally. Never return an empty response if the tool returned data. When a tool result contains a numeric value, state that exact number in your response - never recalculate, round, or guess a number yourself. Never invent or guess an employee id: when the user refers to someone by name, pass employee_name to the tool (or look them up with query_employees first). If any tool reports that multiple employees match a name, stop and ask the user which one they mean (show each match's name, email and job title) before answering any part of the question - do not give a partial answer for one person and skip the rest. If part of a multi-part question fails for any other reason, tell the user which part failed and why instead of silently leaving it out."
 
 DISPLAY_NAME = "AI HR Assistant"
 DISPLAY_SUBTITLE = "Ask about employees, hierarchy, attendance & job descriptions"
@@ -26,7 +26,7 @@ TOOL_DEFINITIONS = [
           "type": "object",
           "properties": {
             "id": {"type": "integer", "description": "The unique ID of the employee"},
-            "name": {"type": "string", "description": "Full or partial name of the employee"},
+            "name": {"type": "string", "description": "Name and/or email words of the employee, e.g. 'Manish' or 'manish michael' - every word is matched against name or email"},
             "email": {"type": "string", "description": "Email Id of the employee"},
             "manager_name": {"type": "string", "description": "Report manager name of the employee"},
             "status": {"type": "boolean", "description": "Filter by whether the employee is currently active (true) or inactive (false)"},
@@ -72,7 +72,7 @@ TOOL_DEFINITIONS = [
           "type": "object",
           "properties": {
             "emp_id": {"type": "integer", "description": "Employee id, only if already known from a previous tool result"},
-            "employee_name": {"type": "string", "description": "Full or partial employee name - use this when the user refers to someone by name"},
+            "employee_name": {"type": "string", "description": "Employee's name and/or email words, e.g. 'Manish Kumar' or 'manish michael' - every word is matched against name or email. Use this when the user refers to someone by name"},
             "attendance_status": {"type": "string", "description": "Filter by attendance status, e.g. 'Present', 'Privilege Leave', 'Sick Leave'"},
             "date_from": {"type": "string", "description": "Only include attendance records on/after this date (YYYY-MM-DD)"},
             "date_to": {"type": "string", "description": "Only include attendance records on/before this date (YYYY-MM-DD)"}
@@ -89,7 +89,7 @@ TOOL_DEFINITIONS = [
           "type": "object",
           "properties": {
             "emp_id": {"type": "integer", "description": "Employee id, only if already known from a previous tool result"},
-            "employee_name": {"type": "string", "description": "Full or partial employee name - use this when the user refers to someone by name"},
+            "employee_name": {"type": "string", "description": "Employee's name and/or email words, e.g. 'Manish Kumar' or 'manish michael' - every word is matched against name or email. Use this when the user refers to someone by name"},
             "leave_status": {"type": "string", "description": "Filter by leave approval status: 'approved', 'pending', or 'rejected'"},
             "upcoming": {"type": "boolean", "description": "Set true for upcoming/future leaves (including any leave currently in progress). Prefer this over date filters whenever the user says 'upcoming', 'future', 'planned' or 'next'."},
             "leave_date_from": {"type": "string", "description": "Only include leaves STARTING on/after this date (YYYY-MM-DD). Use for leaves after a specific date."},
@@ -109,7 +109,7 @@ TOOL_DEFINITIONS = [
           "type": "object",
           "properties": {
             "emp_id": {"type": "integer", "description": "Employee id, only if already known from a previous tool result"},
-            "employee_name": {"type": "string", "description": "Full or partial employee name - use this when the user refers to someone by name"},
+            "employee_name": {"type": "string", "description": "Employee's name and/or email words, e.g. 'Manish Kumar' or 'manish michael' - every word is matched against name or email. Use this when the user refers to someone by name"},
             "from_date": {"type": "string", "description": "Only include months on/after this date (YYYY-MM-DD)"},
             "to_date": {"type": "string", "description": "Only include months on/before this date (YYYY-MM-DD)"}
           }
@@ -160,7 +160,7 @@ TOOL_DEFINITIONS = [
           "type": "object",
           "properties": {
             "emp_id": {"type": "integer", "description": "Employee id, only if already known from a previous tool result"},
-            "employee_name": {"type": "string", "description": "Full or partial employee name - use this when the user refers to someone by name"},
+            "employee_name": {"type": "string", "description": "Employee's name and/or email words, e.g. 'Manish Kumar' or 'manish michael' - every word is matched against name or email. Use this when the user refers to someone by name"},
             "start_month": {"type": "string", "description": "Only include ratings on/after this date (YYYY-MM-DD)"},
             "end_month": {"type": "string", "description": "Only include ratings on/before this date (YYYY-MM-DD)"},
             "performance": {
